@@ -1,13 +1,12 @@
 package com.lagou.service.imp;
 
 import com.lagou.dao.RoleMapper;
-import com.lagou.domain.Role;
-import com.lagou.domain.RoleMenuVO;
-import com.lagou.domain.Role_menu_relation;
+import com.lagou.domain.*;
 import com.lagou.service.RoleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -77,5 +76,62 @@ public class RoleServiceImpl implements RoleService {
         roleMapper.deleteRole(roleId);
 
     }
+
+    /*
+        获取当前角色拥有的资源信息
+     */
+    @Override
+    public List<ResourceCategory> findResourceListByRoleId(Integer roleId) {
+
+        // 调用Mapper方法
+        List<Resource> resourceList = roleMapper.findResourceByRoleId(roleId);
+        List<ResourceCategory> resourceCategoryList = roleMapper.findResourceCategoryByRoleId(roleId);
+
+        ArrayList<Resource> list = new ArrayList<>();
+        // 遍历封装并返回
+        for (ResourceCategory resourceCategory : resourceCategoryList) {
+            for (Resource resource : resourceList) {
+                if (resourceCategory.getId().equals(resource.getCategoryId())){
+                    list.add(resource);
+                }
+            }
+            resourceCategory.setResourceList(list);
+            list=null;
+        }
+
+        return resourceCategoryList;
+    }
+
+    /*
+        为角色分配资源
+     */
+    @Override
+    public void roleContextResource(RoleResourceVo roleResourceVo) {
+
+        // 清空与资源中间表关联关系
+        roleMapper.deleteRoleContextResource(roleResourceVo.getRoleId());
+
+        // 为角色分配资源信息
+        RoleResourceRelation roleResourceRelation = new RoleResourceRelation();
+        Date date = new Date();
+        List<Integer> resourceIdList = roleResourceVo.getResourceIdList();
+
+        for (Integer integer : resourceIdList) {
+
+            // 补全信息
+            roleResourceRelation.setRoleId(roleResourceVo.getRoleId());
+            roleResourceRelation.setResourceId(integer);
+            roleResourceRelation.setCreateTime(date);
+            roleResourceRelation.setUpdateTime(date);
+            roleResourceRelation.setCreateBy("system");
+            roleResourceRelation.setUpdateBy("system");
+
+            // 调用mapper方法
+            roleMapper.roleContextResource(roleResourceRelation);
+        }
+
+    }
+
+
 
 }
